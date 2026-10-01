@@ -471,5 +471,46 @@ RSpec.describe RuboCop::Cop::Style::PercentLiteralDelimiters, :config do
     it_behaves_like('escape characters', '%x')
     it_behaves_like('escape characters', '%r')
     it_behaves_like('escape characters', '%i')
+
+    shared_examples 'escaped delimiters' do |percent_literal|
+      it "does not register an offense for #{percent_literal} enclosing an escaped delimiter" do
+        expect_no_offenses("#{percent_literal}!a\\!b!")
+      end
+
+      it "does not register an offense for #{percent_literal} enclosing an escaped paired delimiter" do
+        expect_no_offenses("#{percent_literal}(a\\)b)")
+      end
+
+      it "corrects #{percent_literal} ending with an escaped backslash" do
+        expect_offense(<<~RUBY, percent_literal: percent_literal)
+          %{percent_literal}(a\\\\)
+          ^{percent_literal}^^^^^ `#{percent_literal}`-literals should be delimited by `[` and `]`.
+        RUBY
+
+        expect_correction(<<~RUBY)
+          #{percent_literal}[a\\\\]
+        RUBY
+      end
+
+      it "corrects #{percent_literal} enclosing nested delimiters" do
+        expect_offense(<<~RUBY, percent_literal: percent_literal)
+          %{percent_literal}(a(b)c)
+          ^{percent_literal}^^^^^^^ `#{percent_literal}`-literals should be delimited by `[` and `]`.
+        RUBY
+
+        expect_correction(<<~RUBY)
+          #{percent_literal}[a(b)c]
+        RUBY
+      end
+    end
+
+    it_behaves_like('escaped delimiters', '%')
+    it_behaves_like('escaped delimiters', '%q')
+    it_behaves_like('escaped delimiters', '%Q')
+    it_behaves_like('escaped delimiters', '%s')
+    it_behaves_like('escaped delimiters', '%W')
+    it_behaves_like('escaped delimiters', '%x')
+    it_behaves_like('escaped delimiters', '%r')
+    it_behaves_like('escaped delimiters', '%I')
   end
 end
