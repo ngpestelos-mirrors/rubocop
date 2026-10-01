@@ -243,6 +243,78 @@ RSpec.describe RuboCop::Cop::Style::MethodCallWithoutArgsParentheses, :config do
       RUBY
     end
 
+    it 'accepts parens when a local variable with the same name was assigned earlier' do
+      expect_no_offenses(<<~RUBY)
+        test = 1
+        p test()
+      RUBY
+    end
+
+    it 'accepts parens when a local variable with the same name was assigned in a conditional' do
+      expect_no_offenses(<<~RUBY)
+        if cond then test = 2 end
+        p test()
+      RUBY
+    end
+
+    it 'accepts parens when a method argument has the same name' do
+      expect_no_offenses(<<~RUBY)
+        def foo(test)
+          test()
+        end
+      RUBY
+    end
+
+    it 'accepts parens when an outer local variable has the same name inside a block' do
+      expect_no_offenses(<<~RUBY)
+        test = 1
+        items.each { p test() }
+      RUBY
+    end
+
+    it 'accepts parens when removing them would turn a following operator into an argument' do
+      expect_no_offenses(<<~RUBY)
+        p test() -1
+        p test() [1]
+      RUBY
+    end
+
+    it 'registers an offense when a local variable with the same name is assigned later' do
+      expect_offense(<<~RUBY)
+        p test()
+              ^^ Do not use parentheses for method calls with no arguments.
+        test = 1
+      RUBY
+
+      expect_correction(<<~RUBY)
+        p test
+        test = 1
+      RUBY
+    end
+
+    it 'registers an offense when a local variable with the same name is in another method' do
+      expect_offense(<<~RUBY)
+        def foo
+          test = 1
+        end
+
+        def bar
+          test()
+              ^^ Do not use parentheses for method calls with no arguments.
+        end
+      RUBY
+
+      expect_correction(<<~RUBY)
+        def foo
+          test = 1
+        end
+
+        def bar
+          test
+        end
+      RUBY
+    end
+
     it 'registers an empty parens offense for array mass assignment with same name' do
       expect_offense(<<~RUBY)
         A = [1, 2]

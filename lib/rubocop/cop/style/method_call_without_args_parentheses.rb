@@ -29,6 +29,7 @@ module RuboCop
       class MethodCallWithoutArgsParentheses < Base
         include AllowedMethods
         include AllowedPattern
+        include ReparsedEquivalence
         extend AutoCorrector
 
         MSG = 'Do not use parentheses for method calls with no arguments.'
@@ -51,10 +52,18 @@ module RuboCop
         def register_offense(node)
           range = offense_range(node)
           return if processed_source.contains_comment?(range)
+          # The parentheses are significant when removing them changes how the
+          # code parses, e.g. when a local variable with the same name is in
+          # scope (`foo = 1; foo()`) or an operator follows (`foo() -1`).
+          return if verified_by_reparse([range]).empty?
 
           add_offense(range) do |corrector|
-            corrector.remove(range)
+            apply_reparse_correction(corrector, range)
           end
+        end
+
+        def apply_reparse_correction(corrector, range)
+          corrector.remove(range)
         end
 
         def ineligible_node?(node)
