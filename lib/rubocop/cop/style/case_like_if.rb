@@ -224,10 +224,9 @@ module RuboCop
         end
 
         def branch_conditions(node)
-          conditions = []
-          while node&.if_type? && !node.ternary?
+          conditions = [node.condition]
+          while (node = node.else_branch)&.if_type? && node.elsif?
             conditions << node.condition
-            node = node.else_branch
           end
           conditions
         end
