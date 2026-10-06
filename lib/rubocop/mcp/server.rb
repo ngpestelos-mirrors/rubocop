@@ -33,10 +33,20 @@ module RuboCop
     # RuboCop MCP Server.
     # @api private
     class Server
+      INSPECTION_DESCRIPTION =
+        'Inspect Ruby code for offenses. ' \
+        'Provide `source_code` to check inline code or `path` to check files. ' \
+        'Offenses use the `rubocop --format json` format, with 1-based lines. ' \
+        '`correctable` says whether `rubocop_autocorrection` fixes an offense, ' \
+        'and one whose `correction` is not `safe` needs `safety` set to false.'
+
       def initialize(config_store)
         @config_store = config_store
         @runtime = RuboCop::LSP::Runtime.new(@config_store)
         @options = {}
+        # Offenses are reported the way `--format json` reports them, so an agent
+        # sees the same 1-based locations and correction data either way.
+        @json_formatter = RuboCop::Formatter::JSONFormatter.new(nil)
       end
 
       def start
@@ -55,8 +65,7 @@ module RuboCop
       def inspection_tool
         build_tool(
           name: 'rubocop_inspection',
-          description: 'Inspect Ruby code for offenses. ' \
-                       'Provide `source_code` to check inline code or `path` to check files.',
+          description: INSPECTION_DESCRIPTION,
           title: "RuboCop's inspection",
           destructive_hint: false,
           idempotent_hint: true,
@@ -85,13 +94,11 @@ module RuboCop
 
       def run_inspection(path, source_code)
         if source_code
-          offenses = @runtime.offenses(path || 'example.rb', source_code, source_code.encoding)
-          offenses.to_json
+          offenses = @runtime.raw_offenses(path || 'example.rb', source_code)
+          offenses.map { |offense| @json_formatter.hash_for_offense(offense) }.to_json
         else
           process_files(path, filter_empty: true) do |file, source|
-            offenses = @runtime.offenses(file, source, source.encoding)
-
-            { path: PathUtil.relative_path(file), offenses: offenses }
+            @json_formatter.hash_for_file(file, @runtime.raw_offenses(file, source))
           end
         end
       end
