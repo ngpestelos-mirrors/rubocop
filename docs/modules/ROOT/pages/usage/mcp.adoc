@@ -40,13 +40,16 @@ $ gem install mcp
 
 == Available Tools
 
-The MCP server exposes two tools:
+The MCP server exposes these tools:
 
 `rubocop_inspection`::
 Inspect Ruby code for offenses. Accepts a `path` to check files on disk or `source_code` to check inline code. Returns detected offenses as JSON.
 
 `rubocop_autocorrection`::
 Autocorrect RuboCop offenses in Ruby code. Accepts `path` or `source_code` like the inspection tool, plus a `safety` boolean (defaults to `true`). When `safety` is `true`, only safe corrections are applied; set it to `false` to include unsafe corrections.
+
+`rubocop_explain`::
+Explain what cops do, the way xref:usage/cli_reference.adoc[`--explain`] does: the description, the bad and good examples from the cop's own documentation, its configuration as the project resolves it, and whether it autocorrects. Takes a `cop_names` list, plus an optional `path` to explain the configuration that applies to that file, which can differ from the project root's. An agent can ask about the cops an inspection reported instead of guessing their intent from a one-line message.
 
 == Client Configuration
 
